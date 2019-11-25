@@ -41,10 +41,17 @@ void setupWeb() {
   webServer.on("/fieldValue", HTTP_POST, []() {
     digitalWrite(led, 0);
     String name = webServer.arg("name");
+    String oldValue = getFieldValue(name, fields, fieldCount);
     String value = webServer.arg("value");
     String newValue = setFieldValue(name, value, fields, fieldCount);
     webServer.send(200, "text/json", newValue);
     digitalWrite(led, 1);
+    Serial.print("POST ");
+    Serial.print(name);
+    Serial.print(" ");
+    Serial.print(oldValue);
+    Serial.print("->");
+    Serial.println(newValue);
   });
 
   webServer.serveStatic("/", SPIFFS, "/index.htm", "max-age=86400");
@@ -84,4 +91,3 @@ void handleWeb() {
     }
   }
 }
-
