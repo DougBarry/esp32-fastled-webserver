@@ -263,16 +263,19 @@ void fadeUpToWhite()
   uint32_t deltams = ms - sLastMillis ;
   sLastMillis  = ms;
   sPseudotime += deltams;
+
+  if (sPseudotime < 250)
+  {
+    fill_solid(leds, NUM_LEDS, CRGB::Black);
+  } else {
+    for ( uint16_t i = 0 ; i < NUM_LEDS; i++) {
+      nblend( leds[i], CRGB::White, 8);
+    }
+  }
   
-  uint8_t value = ((sPseudotime / 2000) * 255);
-  uint8_t whiteValue = constrain(value, 0, 255);
-
-  CRGB solicColor = CRGB(whiteValue, whiteValue, whiteValue);
-
-  fill_solid(leds, NUM_LEDS, solidColor);
 }
 
-void alternatingSolidColours(CRGB colour1, CRGB colour2, uint32_t time_interval)
+void alternatingSolidColours(CRGB colour1, CRGB colour2, uint32_t timeInterval)
 {
   static uint32_t sPseudotime = 0;
   static uint32_t sLastMillis = 0;
@@ -284,16 +287,18 @@ void alternatingSolidColours(CRGB colour1, CRGB colour2, uint32_t time_interval)
 
   CRGB newcolour = CRGB(0,0,0);
   
-  if ((sPseudotime /1000) % time_interval) {
+  if ((sPseudotime /1000) % timeInterval) {
     newcolour = colour2;
   } else {
     newcolour = colour1;
   }
 
-  fill_solid(leds, NUM_LEDS, newcolour);
+  for ( uint16_t i = 0 ; i < NUM_LEDS; i++) {
+    nblend( leds[i], newcolour, 16);
+  }
 }
 
-void runningColours(CRGB colour1, CRGB colour2)
+void runningColours(CRGB colour1, CRGB colour2, uint8_t segmentWidth = 1)
 {
   static uint32_t sPseudotime = 0;
   static uint32_t sLastMillis = 0;
@@ -314,17 +319,58 @@ void runningColours(CRGB colour1, CRGB colour2)
     secondcolour = colour2;
   }
 
+  uint8_t ledNumber = 0;
   bool c = false;
   
   for ( uint16_t i = 0 ; i < NUM_LEDS; i++) {
-    if (c) {
+    if (!c) {
       nblend( leds[i], firstcolour, 16);
     } else {
       nblend( leds[i], secondcolour, 16);
     }
-    c=!c;
+    ledNumber++;
+    if (ledNumber >= segmentWidth) {
+      c=!c;
+      ledNumber = 0;
+    }
   }
 
+}
+
+void colourChain1(CRGB colours[], int8_t colourCount, int8_t segmentWidth, uint32_t timeInterval)
+{
+  static uint32_t sPseudotime = 0;
+  static uint32_t sLastMillis = 0;
+
+  uint32_t ms = millis();
+  uint32_t deltams = ms - sLastMillis ;
+  sLastMillis  = ms;
+  sPseudotime += deltams;
+
+  uint8_t currentColour = 0;
+  // FIXME: Don't know why but this doesnt work
+  //size_t colourCount  = sizeof(colours)/sizeof(colours[0]);
+
+  uint8_t offset = ((sPseudotime / 1000) % timeInterval);
+  currentColour = offset;
+
+  while (currentColour >= colourCount)
+  {
+    currentColour = currentColour - colourCount;
+  }
+
+  uint8_t ledNumber = 0;
+  
+  for ( uint16_t i = 0 ; i < NUM_LEDS; i++) {
+    CRGB colour = colours[currentColour];
+    nblend( leds[i], colour, 16);
+    ledNumber++;
+    if (ledNumber >= segmentWidth) {
+      ledNumber = 0;
+      currentColour++;
+      if (currentColour >= colourCount) currentColour = 0;
+    }
+  }
 }
 
 void christmas1()
@@ -334,7 +380,23 @@ void christmas1()
 
 void christmas2()
 {
-  runningColours(CRGB::Green, CRGB::Red );
+  runningColours(CRGB::Green, CRGB::Red);
+}
+
+void christmas3()
+{
+  runningColours(CRGB::Green, CRGB::Red, 4);
+}
+
+void experiment1()
+{
+  CRGB colourArray[4] = {
+    CRGB::Red,
+    CRGB::Black,
+    CRGB::Green,
+    CRGB::Black,
+  };
+  colourChain1(colourArray, 4, 2, 4);
 }
 
 typedef void (*Pattern)();
@@ -369,6 +431,8 @@ PatternAndNameList patterns = {
 //  { runningColours,         "Running Colours" },
   { christmas1,             "Doug XMas 1" },
   { christmas2,             "Doug XMas 2" },
+  { christmas3,             "Doug XMas 3" },
+  { experiment1,            "Colour chain experiment" },
 };
 
 const uint8_t patternCount = ARRAY_SIZE(patterns);
