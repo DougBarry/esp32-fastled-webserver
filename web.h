@@ -59,7 +59,7 @@ void setupWeb() {
   webServer.serveStatic("/favicon.ico", SPIFFS, "/favicon.ico", "max-age=86400");
   webServer.serveStatic("/css/styles.css", SPIFFS, "/css/styles.css", "max-age=86400");
   webServer.serveStatic("/js/app.js", SPIFFS, "/js/app.js", "max-age=86400");
-  webServer.serveStatic("/images/atom196.png", SPIFFS, "/images/atom196.png", "max-age=86400");
+  webServer.serveStatic("/images/apple-touch-icon.png", SPIFFS, "/images/apple-touch-icon.png", "max-age=86400");
 
   webServer.begin();
   Serial.println ( "HTTP server started" );
