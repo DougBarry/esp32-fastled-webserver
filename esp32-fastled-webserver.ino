@@ -46,9 +46,9 @@ uint8_t currentPatternIndex = 0; // Index number of which pattern is current
 uint8_t gHue = 0; // rotating "base color" used by many of the patterns
 
 uint8_t power = 1;
-uint8_t brightness = 8;
+uint8_t brightness = 255;
 
-uint8_t speed = 30;
+uint8_t speed = 1;
 
 // COOLING: How much does the air cool as it rises?
 // Less cooling = taller flames.  More cooling = shorter flames.
@@ -60,7 +60,7 @@ uint8_t cooling = 50;
 // Default 120, suggested range 50-200.
 uint8_t sparking = 120;
 
-CRGB solidColor = CRGB::Blue;
+CRGB solidColor = CRGB::White;
 
 uint8_t cyclePalettes = 0;
 uint8_t paletteDuration = 10;
@@ -78,8 +78,8 @@ unsigned long paletteTimeout = 0;
 #define NUM_LEDS NUM_LEDS_PER_STRIP * NUM_STRIPS
 CRGB leds[NUM_LEDS];
 
-#define MILLI_AMPS         4000 // IMPORTANT: set the max milli-Amps of your power supply (4A = 4000mA)
-#define FRAMES_PER_SECOND  120
+#define MILLI_AMPS         1800 // IMPORTANT: set the max milli-Amps of your power supply (4A = 4000mA)
+#define FRAMES_PER_SECOND  60
 
 // -- The core to run FastLED.show()
 #define FASTLED_SHOW_CORE 0
