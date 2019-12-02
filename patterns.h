@@ -33,6 +33,7 @@ void rainbow()
 
 void addGlitter( fract8 chanceOfGlitter)
 {
+  return;
   if ( random8() < chanceOfGlitter) {
     leds[ random16(NUM_LEDS) ] += CRGB::White;
   }
@@ -252,6 +253,90 @@ void colorWaves()
   colorwaves(leds, NUM_LEDS, currentPalette);
 }
 
+// FIXME: Doesnt work!
+void fadeUpToWhite()
+{
+  static uint32_t sPseudotime = 0;
+  static uint32_t sLastMillis = 0;
+
+  uint32_t ms = millis();
+  uint32_t deltams = ms - sLastMillis ;
+  sLastMillis  = ms;
+  sPseudotime += deltams;
+  
+  uint8_t value = ((sPseudotime / 2000) * 255);
+  uint8_t whiteValue = constrain(value, 0, 255);
+
+  CRGB solicColor = CRGB(whiteValue, whiteValue, whiteValue);
+
+  fill_solid(leds, NUM_LEDS, solidColor);
+}
+
+void alternatingSolidColours(CRGB colour1, CRGB colour2, uint32_t time_interval)
+{
+  static uint32_t sPseudotime = 0;
+  static uint32_t sLastMillis = 0;
+
+  uint32_t ms = millis();
+  uint32_t deltams = ms - sLastMillis ;
+  sLastMillis  = ms;
+  sPseudotime += deltams;
+
+  CRGB newcolour = CRGB(0,0,0);
+  
+  if ((sPseudotime /1000) % time_interval) {
+    newcolour = colour2;
+  } else {
+    newcolour = colour1;
+  }
+
+  fill_solid(leds, NUM_LEDS, newcolour);
+}
+
+void runningColours(CRGB colour1, CRGB colour2)
+{
+  static uint32_t sPseudotime = 0;
+  static uint32_t sLastMillis = 0;
+
+  uint32_t ms = millis();
+  uint32_t deltams = ms - sLastMillis ;
+  sLastMillis  = ms;
+  sPseudotime += deltams;
+
+  CRGB firstcolour = CRGB(0,0,0);
+  CRGB secondcolour = CRGB(0,0,0);
+  
+  if ((sPseudotime /1000) % 2) {
+    firstcolour = colour2;
+    secondcolour = colour1;
+  } else {
+    firstcolour = colour1;
+    secondcolour = colour2;
+  }
+
+  bool c = false;
+  
+  for ( uint16_t i = 0 ; i < NUM_LEDS; i++) {
+    if (c) {
+      nblend( leds[i], firstcolour, 16);
+    } else {
+      nblend( leds[i], secondcolour, 16);
+    }
+    c=!c;
+  }
+
+}
+
+void christmas1()
+{
+  alternatingSolidColours(CRGB::Green, CRGB::Red, 2);
+}
+
+void christmas2()
+{
+  runningColours(CRGB::Green, CRGB::Red );
+}
+
 typedef void (*Pattern)();
 typedef Pattern PatternList[];
 typedef struct {
@@ -280,6 +365,10 @@ PatternAndNameList patterns = {
   { bpm, "bpm" },
 
   { showSolidColor,         "Solid Color" },
+  { fadeUpToWhite,          "Fade Up To White" },
+//  { runningColours,         "Running Colours" },
+  { christmas1,             "Doug XMas 1" },
+  { christmas2,             "Doug XMas 2" },
 };
 
 const uint8_t patternCount = ARRAY_SIZE(patterns);
