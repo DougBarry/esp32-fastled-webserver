@@ -28,6 +28,7 @@
 #include <FS.h>
 #include <SPIFFS.h>
 #include <EEPROM.h>
+#include <ArduinoOTA.h>
 
 #if defined(FASTLED_VERSION) && (FASTLED_VERSION < 3001008)
 #warning "Requires FastLED 3.1.8 or later; check github for latest code."
@@ -92,6 +93,7 @@ CRGB leds[NUM_LEDS];
 #include "secrets.h"
 #include "wifi.h"
 #include "web.h"
+#include "OTAUpdate.h"
 
 // wifi ssid and password should be added to a file in the sketch named secrets.h
 // the secrets.h file should be added to the .gitignore file and never committed or
@@ -187,6 +189,7 @@ void setup() {
 
   setupWifi();
   setupWeb();
+  setupOTA();
 
   // three-wire LEDs (WS2811, WS2812, NeoPixel)
   FastLED.addLeds<LED_TYPE, DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
@@ -248,12 +251,18 @@ void loop()
   }
 
   // send the 'leds' array out to the actual LED strip
-  FastLEDshowESP32();
+  EVERY_N_MILLISECONDS(100) {
+    FastLEDshowESP32();
+  }
 
   // FastLED.show();
   // insert a delay to keep the framerate modest
   // FastLED.delay(1000 / FRAMES_PER_SECOND);
-  delay(1000 / FRAMES_PER_SECOND);
+  //delay(1000 / FRAMES_PER_SECOND);
+
+  ArduinoOTA.handle();  
+
+  delay(1);
 }
 
 void nextPattern()

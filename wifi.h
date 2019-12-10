@@ -60,9 +60,13 @@ void setupWifi() {
   //  else
   //  {
   WiFi.mode(WIFI_STA);
+  Serial.println("Starting WiFi...");
+  Serial.print("WiFi MAC Address: ");
+  Serial.println(WiFi.macAddress());
   Serial.printf("Connecting to %s\n", ssid);
   if (String(WiFi.SSID()) != String(ssid)) {
     WiFi.begin(ssid, password);
   }
+  
   //  }
 }
