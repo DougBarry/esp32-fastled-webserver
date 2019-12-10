@@ -390,14 +390,23 @@ void christmas3()
 
 void experiment1()
 {
-  CRGB colourArray[4] = {
+  CRGB colourArray[8] = {
     CRGB::Red,
     CRGB::Black,
     CRGB::Green,
     CRGB::Black,
+    CRGB::Blue,
+    CRGB::Black,
+    CRGB::Yellow,
+    CRGB::Black,
   };
-  colourChain1(colourArray, 4, 2, 4);
+  colourChain1(colourArray, 8, 2, 4);
 }
+
+/* IDEAS
+ * Dripping effect from top of tree
+ * Dripping effect that fills up the tree
+ */
 
 typedef void (*Pattern)();
 typedef Pattern PatternList[];
