@@ -269,7 +269,7 @@ void fadeUpToWhite()
     fill_solid(leds, NUM_LEDS, CRGB::Black);
   } else {
     for ( uint16_t i = 0 ; i < NUM_LEDS; i++) {
-      nblend( leds[i], CRGB::White, 8);
+      nblend( leds[i], CRGB::White, 1);
     }
   }
   
@@ -294,7 +294,7 @@ void alternatingSolidColours(CRGB colour1, CRGB colour2, uint32_t timeInterval)
   }
 
   for ( uint16_t i = 0 ; i < NUM_LEDS; i++) {
-    nblend( leds[i], newcolour, 16);
+    nblend( leds[i], newcolour, 1);
   }
 }
 
@@ -324,9 +324,9 @@ void runningColours(CRGB colour1, CRGB colour2, uint8_t segmentWidth = 1)
   
   for ( uint16_t i = 0 ; i < NUM_LEDS; i++) {
     if (!c) {
-      nblend( leds[i], firstcolour, 16);
+      nblend( leds[i], firstcolour, 1);
     } else {
-      nblend( leds[i], secondcolour, 16);
+      nblend( leds[i], secondcolour, 1);
     }
     ledNumber++;
     if (ledNumber >= segmentWidth) {
@@ -363,7 +363,7 @@ void colourChain1(CRGB colours[], int8_t colourCount, int8_t segmentWidth, uint3
   
   for ( uint16_t i = 0 ; i < NUM_LEDS; i++) {
     CRGB colour = colours[currentColour];
-    nblend( leds[i], colour, 16);
+    nblend( leds[i], colour, 1);
     ledNumber++;
     if (ledNumber >= segmentWidth) {
       ledNumber = 0;
