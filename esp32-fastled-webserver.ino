@@ -29,6 +29,7 @@
 #include <SPIFFS.h>
 #include <EEPROM.h>
 #include <ArduinoOTA.h>
+#include <math.h>
 
 #if defined(FASTLED_VERSION) && (FASTLED_VERSION < 3001008)
 #warning "Requires FastLED 3.1.8 or later; check github for latest code."
@@ -36,7 +37,7 @@
 
 WebServer webServer(80);
 
-const int led = 5;
+const int led = 25;
 
 uint8_t autoplay = 0;
 uint8_t autoplayDuration = 10;
@@ -47,7 +48,7 @@ uint8_t currentPatternIndex = 0; // Index number of which pattern is current
 uint8_t gHue = 0; // rotating "base color" used by many of the patterns
 
 uint8_t power = 1;
-uint8_t brightness = 255;
+uint8_t brightness = (255/100) * 75;  // 75%
 
 uint8_t speed = 1;
 
@@ -72,7 +73,7 @@ unsigned long paletteTimeout = 0;
 
 #define DATA_PIN    12 // pins tested so far on the Feather ESP32: 13, 12, 27, 33, 15, 32, 14, SCL
 //#define CLK_PIN   4
-#define LED_TYPE    WS2812B
+#define LED_TYPE    WS2811
 #define COLOR_ORDER RGB
 #define NUM_STRIPS 1
 #define NUM_LEDS_PER_STRIP 50
@@ -80,7 +81,10 @@ unsigned long paletteTimeout = 0;
 CRGB leds[NUM_LEDS];
 
 #define MILLI_AMPS         1800 // IMPORTANT: set the max milli-Amps of your power supply (4A = 4000mA)
-#define FRAMES_PER_SECOND  60
+#define FRAMES_PER_SECOND  50
+
+unsigned long updateIntervalLEDs = 0;
+unsigned long nextLEDsUpdate = 0;
 
 // -- The core to run FastLED.show()
 #define FASTLED_SHOW_CORE 0
@@ -185,7 +189,7 @@ void setup() {
   SPIFFS.begin();
   listDir(SPIFFS, "/", 1);
 
-//  loadFieldsFromEEPROM(fields, fieldCount);
+  //  loadFieldsFromEEPROM(fields, fieldCount);
 
   setupWifi();
   setupWeb();
@@ -198,17 +202,17 @@ void setup() {
   //FastLED.addLeds<LED_TYPE,DATA_PIN,CLK_PIN,COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
 
   // Parallel output: 13, 12, 27, 33, 15, 32, 14, SCL
-//  FastLED.addLeds<LED_TYPE, 13, COLOR_ORDER>(leds, 0, NUM_LEDS_PER_STRIP).setCorrection(TypicalLEDStrip);
-//  FastLED.addLeds<LED_TYPE, 12, COLOR_ORDER>(leds, NUM_LEDS_PER_STRIP, NUM_LEDS_PER_STRIP).setCorrection(TypicalLEDStrip);
-//  FastLED.addLeds<LED_TYPE, 27, COLOR_ORDER>(leds, 2 * NUM_LEDS_PER_STRIP, NUM_LEDS_PER_STRIP).setCorrection(TypicalLEDStrip);
-//  FastLED.addLeds<LED_TYPE, 33, COLOR_ORDER>(leds, 3 * NUM_LEDS_PER_STRIP, NUM_LEDS_PER_STRIP).setCorrection(TypicalLEDStrip);
-//  FastLED.addLeds<LED_TYPE, 15, COLOR_ORDER>(leds, 4 * NUM_LEDS_PER_STRIP, NUM_LEDS_PER_STRIP).setCorrection(TypicalLEDStrip);
-//  FastLED.addLeds<LED_TYPE, 32, COLOR_ORDER>(leds, 5 * NUM_LEDS_PER_STRIP, NUM_LEDS_PER_STRIP).setCorrection(TypicalLEDStrip);
-//  FastLED.addLeds<LED_TYPE, 14, COLOR_ORDER>(leds, 6 * NUM_LEDS_PER_STRIP, NUM_LEDS_PER_STRIP).setCorrection(TypicalLEDStrip);
-//  FastLED.addLeds<LED_TYPE, SCL, COLOR_ORDER>(leds, 7 * NUM_LEDS_PER_STRIP, NUM_LEDS_PER_STRIP).setCorrection(TypicalLEDStrip);
+  //  FastLED.addLeds<LED_TYPE, 13, COLOR_ORDER>(leds, 0, NUM_LEDS_PER_STRIP).setCorrection(TypicalLEDStrip);
+  //  FastLED.addLeds<LED_TYPE, 12, COLOR_ORDER>(leds, NUM_LEDS_PER_STRIP, NUM_LEDS_PER_STRIP).setCorrection(TypicalLEDStrip);
+  //  FastLED.addLeds<LED_TYPE, 27, COLOR_ORDER>(leds, 2 * NUM_LEDS_PER_STRIP, NUM_LEDS_PER_STRIP).setCorrection(TypicalLEDStrip);
+  //  FastLED.addLeds<LED_TYPE, 33, COLOR_ORDER>(leds, 3 * NUM_LEDS_PER_STRIP, NUM_LEDS_PER_STRIP).setCorrection(TypicalLEDStrip);
+  //  FastLED.addLeds<LED_TYPE, 15, COLOR_ORDER>(leds, 4 * NUM_LEDS_PER_STRIP, NUM_LEDS_PER_STRIP).setCorrection(TypicalLEDStrip);
+  //  FastLED.addLeds<LED_TYPE, 32, COLOR_ORDER>(leds, 5 * NUM_LEDS_PER_STRIP, NUM_LEDS_PER_STRIP).setCorrection(TypicalLEDStrip);
+  //  FastLED.addLeds<LED_TYPE, 14, COLOR_ORDER>(leds, 6 * NUM_LEDS_PER_STRIP, NUM_LEDS_PER_STRIP).setCorrection(TypicalLEDStrip);
+  //  FastLED.addLeds<LED_TYPE, SCL, COLOR_ORDER>(leds, 7 * NUM_LEDS_PER_STRIP, NUM_LEDS_PER_STRIP).setCorrection(TypicalLEDStrip);
 
   FastLED.setMaxPowerInVoltsAndMilliamps(5, MILLI_AMPS);
-  
+
   // set master brightness control
   FastLED.setBrightness(brightness);
 
@@ -220,6 +224,8 @@ void setup() {
   xTaskCreatePinnedToCore(FastLEDshowTask, "FastLEDshowTask", 2048, NULL, 2, &FastLEDshowTaskHandle, FASTLED_SHOW_CORE);
 
   autoPlayTimeout = millis() + (autoplayDuration * 1000);
+  
+  updateIntervalLEDs = round(1000 / FRAMES_PER_SECOND);
 }
 
 void loop()
@@ -233,7 +239,7 @@ void loop()
     // Call the current pattern function once, updating the 'leds' array
     patterns[currentPatternIndex].pattern();
 
-    EVERY_N_MILLISECONDS(40) {
+    EVERY_N_MILLISECONDS(50) {
       // slowly blend the current palette to the next
       nblendPaletteTowardPalette(currentPalette, targetPalette, 8);
       gHue++;  // slowly cycle the "base color" through the rainbow
@@ -251,8 +257,9 @@ void loop()
   }
 
   // send the 'leds' array out to the actual LED strip
-  EVERY_N_MILLISECONDS(100) {
+  if ( millis() > nextLEDsUpdate ) {
     FastLEDshowESP32();
+    nextLEDsUpdate = millis() + updateIntervalLEDs;
   }
 
   // FastLED.show();
@@ -260,7 +267,9 @@ void loop()
   // FastLED.delay(1000 / FRAMES_PER_SECOND);
   //delay(1000 / FRAMES_PER_SECOND);
 
-  ArduinoOTA.handle();  
+  EVERY_N_MILLISECONDS(10) {
+    ArduinoOTA.handle();
+  }
 
   delay(1);
 }
