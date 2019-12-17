@@ -22,6 +22,8 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#define FASTLED_ALLOW_INTERRUPTS 0
+ 
 #include <FastLED.h>
 #include <WiFi.h>
 #include <WebServer.h>
@@ -30,6 +32,7 @@
 #include <EEPROM.h>
 #include <ArduinoOTA.h>
 #include <math.h>
+#include "heltec.h"
 
 #if defined(FASTLED_VERSION) && (FASTLED_VERSION < 3001008)
 #warning "Requires FastLED 3.1.8 or later; check github for latest code."
@@ -81,7 +84,7 @@ unsigned long paletteTimeout = 0;
 CRGB leds[NUM_LEDS];
 
 #define MILLI_AMPS         1800 // IMPORTANT: set the max milli-Amps of your power supply (4A = 4000mA)
-#define FRAMES_PER_SECOND  50
+#define FRAMES_PER_SECOND  60
 
 unsigned long updateIntervalLEDs = 0;
 unsigned long nextLEDsUpdate = 0;
@@ -181,9 +184,15 @@ void listDir(fs::FS &fs, const char * dirname, uint8_t levels) {
 
 void setup() {
   pinMode(led, OUTPUT);
-  digitalWrite(led, 1);
+  digitalWrite(led, HIGH);
 
-  //  delay(3000); // 3 second delay for recovery
+  Heltec.begin(true /*DisplayEnable Enable*/, false /*LoRa Disable*/, true /*Serial Enable*/);
+
+  Heltec.display->clear();
+  Heltec.display->setFont(ArialMT_Plain_10);        //设置字体大小
+
+
+  delay(3000); // 3 second safety delay for recovery
   Serial.begin(115200);
 
   SPIFFS.begin();
@@ -196,7 +205,9 @@ void setup() {
   setupOTA();
 
   // three-wire LEDs (WS2811, WS2812, NeoPixel)
-  FastLED.addLeds<LED_TYPE, DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
+  FastLED.addLeds<LED_TYPE, DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalPixelString); //TypicalLEDStrip);
+  FastLED.setDither(DISABLE_DITHER);
+  FastLED.setMaxRefreshRate(60);
 
   // four-wire LEDs (APA102, DotStar)
   //FastLED.addLeds<LED_TYPE,DATA_PIN,CLK_PIN,COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
@@ -211,11 +222,11 @@ void setup() {
   //  FastLED.addLeds<LED_TYPE, 14, COLOR_ORDER>(leds, 6 * NUM_LEDS_PER_STRIP, NUM_LEDS_PER_STRIP).setCorrection(TypicalLEDStrip);
   //  FastLED.addLeds<LED_TYPE, SCL, COLOR_ORDER>(leds, 7 * NUM_LEDS_PER_STRIP, NUM_LEDS_PER_STRIP).setCorrection(TypicalLEDStrip);
 
-  FastLED.setMaxPowerInVoltsAndMilliamps(5, MILLI_AMPS);
+  FastLED.setMaxPowerInVoltsAndMilliamps(12, MILLI_AMPS);
 
   // set master brightness control
   FastLED.setBrightness(brightness);
-
+  
   int core = xPortGetCoreID();
   Serial.print("Main code running on core ");
   Serial.println(core);
@@ -230,14 +241,19 @@ void setup() {
 
 void loop()
 {
+  ArduinoOTA.handle();
   handleWeb();
+
+  //delay(1); // stop it going totally mental
 
   if (power == 0) {
     fill_solid(leds, NUM_LEDS, CRGB::Black);
   }
   else {
     // Call the current pattern function once, updating the 'leds' array
-    patterns[currentPatternIndex].pattern();
+    EVERY_N_MILLISECONDS(updateIntervalLEDs) {
+      patterns[currentPatternIndex].pattern();
+    }
 
     EVERY_N_MILLISECONDS(50) {
       // slowly blend the current palette to the next
@@ -257,21 +273,21 @@ void loop()
   }
 
   // send the 'leds' array out to the actual LED strip
-  if ( millis() > nextLEDsUpdate ) {
-    FastLEDshowESP32();
-    nextLEDsUpdate = millis() + updateIntervalLEDs;
-  }
+//  if ( millis() > nextLEDsUpdate ) {
+    EVERY_N_MILLISECONDS(updateIntervalLEDs) {
+      FastLEDshowESP32();
+    }
+//    nextLEDsUpdate = millis() + updateIntervalLEDs;
+//  }
+  //FastLED.delay(updateIntervalLEDs);
+
+  //delay(updateIntervalLEDs);
 
   // FastLED.show();
   // insert a delay to keep the framerate modest
-  // FastLED.delay(1000 / FRAMES_PER_SECOND);
+  FastLED.delay(1000 / FRAMES_PER_SECOND);
   //delay(1000 / FRAMES_PER_SECOND);
 
-  EVERY_N_MILLISECONDS(10) {
-    ArduinoOTA.handle();
-  }
-
-  delay(1);
 }
 
 void nextPattern()
